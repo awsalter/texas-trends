@@ -43,6 +43,15 @@ def fetch_fred(series_id, start=START_DATE):
     return pd.Series(values, index=dates)
 
 
+def fetch_fred_safe(series_id, start=START_DATE):
+    """Fetch from FRED, returning empty series on any error."""
+    try:
+        return fetch_fred(series_id, start)
+    except Exception as e:
+        print(f"    Warning: FRED series {series_id} unavailable — {e}")
+        return pd.Series(dtype=float)
+
+
 def fetch_bls(series_ids, start_year=START_YEAR):
     """Fetch monthly series from the BLS public API (v2)."""
     end_year = datetime.now().year
@@ -162,6 +171,22 @@ def build_price_pressures():
 
 # ── MONEY MATTERS ─────────────────────────────────────────────────────────────
 
+def parse_quarterly_date(d):
+    """Parse dates in 'YYYY:QX' or 'YYYY QX' format, or fall back to standard parsing."""
+    d = str(d).strip()
+    for sep in [':', ' ']:
+        if f'{sep}Q' in d:
+            parts = d.split(f'{sep}Q')
+            if len(parts) == 2:
+                try:
+                    year  = int(parts[0].strip())
+                    month = (int(parts[1].strip()) - 1) * 3 + 1
+                    return pd.Timestamp(year, month, 1)
+                except (ValueError, TypeError):
+                    pass
+    return pd.to_datetime(d, errors='coerce')
+
+
 def fetch_ny_fed_lw():
     """Download Laubach-Williams r* estimates from NY Fed (quarterly)."""
     url = ('https://www.newyorkfed.org/medialibrary/media/research/economists'
@@ -170,9 +195,9 @@ def fetch_ny_fed_lw():
     r.raise_for_status()
     df = pd.read_excel(io.BytesIO(r.content), skiprows=4)
     df.columns = [str(c).strip() for c in df.columns]
-    # First column is date; find r* column (LW estimate is typically last rstar col)
     date_col = df.columns[0]
-    df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+    # NY Fed uses 'YYYY:QX' format — use custom parser
+    df[date_col] = df[date_col].apply(parse_quarterly_date)
     df = df.dropna(subset=[date_col]).set_index(date_col)
     rstar_cols = [c for c in df.columns if 'rstar' in c.lower() or 'r*' in c.lower()]
     if rstar_cols:
@@ -185,10 +210,25 @@ def fetch_ny_fed_lw():
 
 def fetch_richmond_nri():
     """Download natural rate of interest data from Richmond Fed (quarterly)."""
-    url = ('https://www.richmondfed.org/-/media/richmondfedorg/research'
-           '/national_economy/natural_rate_of_interest/natural_rate_of_interest_data.xlsx')
+    # Try multiple possible URLs since Richmond Fed occasionally moves files
+    urls = [
+        'https://www.richmondfed.org/-/media/richmondfedorg/research/national_economy/natural_rate_of_interest/data/natural-rate-of-interest-data.xlsx',
+        'https://www.richmondfed.org/-/media/richmondfedorg/research/national_economy/natural_rate_of_interest/natural_rate_of_interest_data.xlsx',
+        'https://www.richmondfed.org/-/media/richmondfedorg/research/national_economy/natural_rate_of_interest/data/natural_rate_of_interest_data.xlsx',
+    ]
+    r = None
+    for url in urls:
+        try:
+            resp = requests.get(url, timeout=60)
+            if resp.status_code == 200:
+                r = resp
+                break
+        except Exception:
+            continue
+    if r is None:
+        print("    Warning: Richmond Fed data unavailable — could not reach any known URL")
+        return pd.Series(dtype=float)
     try:
-        r = requests.get(url, timeout=60)
         r.raise_for_status()
         df = pd.read_excel(io.BytesIO(r.content))
         df.columns = [str(c).strip() for c in df.columns]
@@ -260,17 +300,24 @@ def build_money_matters():
 def build_labor():
     print("  Fetching labor market data...")
 
-    # Unemployment rates from FRED
-    lubbock_ur = fetch_fred('LUBBUR')      # Lubbock, TX MSA
-    dfw_ur     = fetch_fred('DALLSTUR')    # Dallas-Fort Worth-Arlington MSA
-    texas_ur   = fetch_fred('TXUR')        # Texas
-    us_ur      = fetch_fred('UNRATE')      # United States
+    # Unemployment rates — use BLS LAUS API for MSA-level data
+    # LAUS series format: LAUMT + state FIPS (2) + CBSA (5) + zeros (5) + measure (03=rate)
+    laus = fetch_bls([
+        'LAUMT483118000000003',   # Lubbock, TX MSA (CBSA 31180)
+        'LAUMT481912400000003',   # Dallas-Fort Worth-Arlington MSA (CBSA 19124)
+        'LASST480000000000003',   # Texas
+        'LAUTT000000000000003',   # United States
+    ])
+    lubbock_ur = laus.get('LAUMT483118000000003', pd.Series(dtype=float))
+    dfw_ur     = laus.get('LAUMT481912400000003', pd.Series(dtype=float))
+    texas_ur   = laus.get('LASST480000000000003',  pd.Series(dtype=float))
+    us_ur      = laus.get('LAUTT000000000000003',  fetch_fred_safe('UNRATE'))
 
-    # Nonfarm payroll employment from FRED
-    lubbock_emp = fetch_fred('LUBBNA')     # Lubbock nonfarm (thousands)
-    dfw_emp     = fetch_fred('DFW856NA')   # DFW nonfarm (thousands)
-    texas_emp   = fetch_fred('TXNA')       # Texas nonfarm (thousands)
-    us_emp      = fetch_fred('PAYEMS')     # US nonfarm (thousands)
+    # Nonfarm payroll employment from FRED (safe fetches with fallbacks)
+    lubbock_emp = fetch_fred_safe('LUBBNA')    # Lubbock nonfarm (thousands)
+    dfw_emp     = fetch_fred_safe('DALLSNA')   # DFW nonfarm (thousands)
+    texas_emp   = fetch_fred_safe('TXNA')      # Texas nonfarm (thousands)
+    us_emp      = fetch_fred('PAYEMS')         # US nonfarm (thousands) — known good
 
     # Employment indices (Jan 2020 = 100)
     emp = pd.DataFrame({
@@ -397,7 +444,7 @@ def main():
             print(f"  ✓ {name}.json saved")
         except Exception as e:
             print(f"  ✗ {name} FAILED: {e}")
-            raise
+            import traceback; traceback.print_exc()
 
     metadata = {
         'last_updated': datetime.now().strftime('%B %d, %Y'),
