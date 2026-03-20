@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texas Trends | Economic Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <div>
+            <h1>Texas Trends</h1>
+            <p class="subtitle">Economic Dashboard</p>
+        </div>
+        <div class="header-meta">
+            Last updated: <span id="last-updated-date">—</span>
+        </div>
+    </div>
+</header>
+
+<nav class="tab-nav">
+    <div class="nav-container">
+        <button class="tab-btn active" data-tab="price-pressures">Price Pressures</button>
+        <button class="tab-btn" data-tab="money-matters">Money Matters</button>
+        <button class="tab-btn" data-tab="lubbock-labor">Lubbock Labor</button>
+        <button class="tab-btn" data-tab="watching-wages">Watching Wages</button>
+    </div>
+</nav>
+
+<main>
+
+    <!-- PRICE PRESSURES -->
+    <section id="price-pressures" class="tab-content active">
+        <div class="section-header">
+            <h2>Price Pressures</h2>
+            <p class="section-desc">How fast are prices rising? This section tracks the Consumer Price Index (CPI) — the broadest measure of what everyday goods and services cost — for the United States, Texas, and the Dallas-Fort Worth metro area. All figures are indexed to January 2020 = 100, so a value of 120 means prices are 20% higher than at the start of 2020. The dotted line shows what prices would look like if inflation had stayed at the Federal Reserve's 2% annual target.</p>
+        </div>
+        <div class="charts-grid">
+            <div class="chart-card wide">
+                <h3>CPI Index (January 2020 = 100)</h3>
+                <div class="chart-wrapper"><canvas id="cpi-levels-chart"></canvas></div>
+            </div>
+            <div class="chart-card wide">
+                <h3>Year-Over-Year Inflation Rate (%)</h3>
+                <div class="chart-wrapper"><canvas id="cpi-yoy-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="data-source">
+            <strong>Sources:</strong> U.S. Bureau of Labor Statistics (national and DFW CPI); Texas Comptroller of Public Accounts / BLS regional data (Texas CPI, calculated as population-weighted average of major Texas metros). Data retrieved via FRED (Federal Reserve Bank of St. Louis) and BLS API. Updated monthly.
+        </div>
+    </section>
+
+    <!-- MONEY MATTERS -->
+    <section id="money-matters" class="tab-content">
+        <div class="section-header">
+            <h2>Money Matters</h2>
+            <p class="section-desc">This section tracks the Federal Reserve's interest rate policy. The "real" federal funds rate is the Fed's benchmark rate adjusted for inflation — the key lever the Fed uses to speed up or slow down the economy. We compare it to two independent estimates of the "natural rate of interest": the rate that keeps the economy growing steadily without causing inflation. When the real rate is above the natural rate, monetary policy is tight. When it's below, policy is loose. Getting this balance right is the Fed's central challenge.</p>
+        </div>
+        <div class="charts-grid">
+            <div class="chart-card wide">
+                <h3>Real Federal Funds Rate vs. Natural Rate Estimates</h3>
+                <div class="chart-wrapper"><canvas id="rates-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="data-source">
+            <strong>Sources:</strong> Federal Reserve Board (federal funds rate target range); U.S. Bureau of Labor Statistics (CPI, used for inflation adjustment); Federal Reserve Bank of New York (Laubach-Williams natural rate estimates, quarterly); Federal Reserve Bank of Richmond (natural rate median estimate, quarterly). Updated monthly.
+        </div>
+    </section>
+
+    <!-- LUBBOCK LABOR -->
+    <section id="lubbock-labor" class="tab-content">
+        <div class="section-header">
+            <h2>Lubbock Labor</h2>
+            <p class="section-desc">How healthy is the job market in Lubbock — and how does it compare to the rest of Texas and the country? This section tracks unemployment rates, total employment levels, and year-over-year job growth across Lubbock, Dallas-Fort Worth, Texas, and the United States. A lower unemployment rate and positive job growth signal a strong local economy.</p>
+        </div>
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Unemployment Rate (%)</h3>
+                <div class="chart-wrapper"><canvas id="unemployment-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Employment: Year-Over-Year Growth (%)</h3>
+                <div class="chart-wrapper"><canvas id="employment-growth-chart"></canvas></div>
+            </div>
+            <div class="chart-card wide">
+                <h3>Total Employment (Index, January 2020 = 100)</h3>
+                <div class="chart-wrapper"><canvas id="employment-levels-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="data-source">
+            <strong>Sources:</strong> U.S. Bureau of Labor Statistics, Local Area Unemployment Statistics (LAUS) and Current Employment Statistics (CES). Data retrieved via FRED and BLS API. Updated monthly.
+        </div>
+    </section>
+
+    <!-- WATCHING WAGES -->
+    <section id="watching-wages" class="tab-content">
+        <div class="section-header">
+            <h2>Watching Wages</h2>
+            <p class="section-desc">Are workers earning more? This section tracks average weekly wages in Lubbock, Dallas-Fort Worth, Texas, and the United States — both dollar amounts and how fast they're growing year over year. We also show the ratio of Lubbock wages to Texas and U.S. wages, which reveals whether the local wage gap is widening or narrowing over time.</p>
+        </div>
+        <div class="charts-grid">
+            <div class="chart-card wide">
+                <h3>Average Weekly Wages ($)</h3>
+                <div class="chart-wrapper"><canvas id="wages-levels-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Wage Growth: Year-Over-Year (%)</h3>
+                <div class="chart-wrapper"><canvas id="wages-growth-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Lubbock Wages as % of Comparison</h3>
+                <div class="chart-wrapper"><canvas id="wages-ratio-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="data-source">
+            <strong>Sources:</strong> U.S. Bureau of Labor Statistics, Quarterly Census of Employment and Wages (QCEW). Data retrieved via BLS API. Updated quarterly (wages data is released on a quarterly basis with an approximate two-quarter lag).
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <div class="footer-content">
+        <p>Texas Trends is produced by <a href="https://www.awsalter.com" target="_blank">Alexander W. Salter</a>, Rawls College of Business, Texas Tech University, and the Free Market Institute.</p>
+        <p class="footer-disclaimer">This dashboard is for informational purposes only. All data is sourced from public government databases and updated automatically each month.</p>
+    </div>
+</footer>
+
+<script src="js/dashboard.js"></script>
+</body>
+</html>
