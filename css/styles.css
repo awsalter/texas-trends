@@ -275,12 +275,58 @@ footer a:hover { color: #fff; }
     color: var(--text);
 }
 
-/* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
+/* ── RESPONSIVE — iPad (portrait and landscape) ──────────────────────────── */
+@media (max-width: 1024px) {
+    main                  { padding: 28px 20px 52px; }
+    .chart-wrapper        { height: 260px; }
+    .methodology-section  { padding: 22px 24px; }
+}
+
+/* ── RESPONSIVE — tablets and large phones ───────────────────────────────── */
 @media (max-width: 768px) {
-    .charts-grid          { grid-template-columns: 1fr; }
-    .chart-card.wide      { grid-column: 1; }
+    /* Header */
+    header                { padding: 20px 0; }
     header h1             { font-size: 1.5rem; }
-    .header-content       { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .tab-btn              { padding: 14px 14px; font-size: 0.8rem; }
-    main                  { padding: 24px 16px 48px; }
+    .header-content       { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .header-meta          { font-size: 0.75rem; }
+
+    /* Tab nav — scrollable row so buttons never wrap or overflow */
+    .nav-container        {
+        padding: 0 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;          /* Firefox */
+    }
+    .nav-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+    .tab-btn              { padding: 13px 14px; font-size: 0.8rem; flex-shrink: 0; }
+
+    /* Layout */
+    main                  { padding: 20px 14px 44px; }
+    .charts-grid          { grid-template-columns: 1fr; gap: 14px; }
+    .chart-card.wide      { grid-column: 1; }
+    .chart-card           { padding: 18px 16px 14px; }
+    .chart-wrapper        { height: 240px; }
+
+    /* Typography */
+    .section-header h2    { font-size: 1.2rem; }
+    .section-desc         { font-size: 0.875rem; }
+    .chart-card h3        { font-size: 0.825rem; margin-bottom: 12px; }
+
+    /* Methodology */
+    .methodology-section  { padding: 18px 16px; }
+    .methodology-item h4  { font-size: 0.85rem; }
+    .methodology-item p   { font-size: 0.825rem; }
+
+    /* Footer */
+    footer                { padding: 24px 0; }
+    footer p              { font-size: 0.8rem; }
+}
+
+/* ── RESPONSIVE — iPhone (small phones) ─────────────────────────────────── */
+@media (max-width: 430px) {
+    header h1             { font-size: 1.3rem; }
+    .tab-btn              { padding: 12px 12px; font-size: 0.75rem; }
+    main                  { padding: 16px 12px 40px; }
+    .chart-wrapper        { height: 210px; }
+    .section-desc         { font-size: 0.845rem; }
 }
