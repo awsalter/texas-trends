@@ -43,15 +43,6 @@ def fetch_fred(series_id, start=START_DATE):
     return pd.Series(values, index=dates)
 
 
-def fetch_fred_safe(series_id, start=START_DATE):
-    """Fetch from FRED, returning empty series on any error."""
-    try:
-        return fetch_fred(series_id, start)
-    except Exception as e:
-        print(f"    Warning: FRED series {series_id} unavailable — {e}")
-        return pd.Series(dtype=float)
-
-
 def fetch_bls(series_ids, start_year=START_YEAR):
     """Fetch monthly series from the BLS public API (v2)."""
     end_year = datetime.now().year
@@ -74,10 +65,18 @@ def fetch_bls(series_ids, start_year=START_YEAR):
         records = []
         for item in series.get('data', []):
             period = item.get('period', '')
+            value  = item.get('value', '-')
+            if value == '-':
+                continue
             if period.startswith('M') and period != 'M13':
                 month = int(period[1:])
                 yr    = int(item['year'])
-                records.append((pd.Timestamp(yr, month, 1), float(item['value'])))
+                records.append((pd.Timestamp(yr, month, 1), float(value)))
+            elif period.startswith('Q'):
+                quarter = int(period[1:])
+                month   = (quarter - 1) * 3 + 1
+                yr      = int(item['year'])
+                records.append((pd.Timestamp(yr, month, 1), float(value)))
         if records:
             records.sort()
             dates, values = zip(*records)
@@ -87,9 +86,14 @@ def fetch_bls(series_ids, start_year=START_YEAR):
 
 def index_to_base(series, base=BASE_DATE):
     """Reindex a series so base_date = 100."""
+    if series.empty:
+        return series
     base_val = series.asof(pd.Timestamp(base))
     if pd.isna(base_val) or base_val == 0:
-        base_val = series.dropna().iloc[0]
+        non_null = series.dropna()
+        if non_null.empty:
+            return series
+        base_val = non_null.iloc[0]
     return (series / base_val * 100).round(3)
 
 
@@ -117,17 +121,17 @@ def target_path(idx, base=BASE_DATE, rate=0.02):
 def build_price_pressures():
     print("  Fetching price pressures...")
 
+    # Fetch CPI one year before START_DATE so YoY values are valid from START_DATE onward
+    cpi_start = str(int(START_DATE[:4]) - 1) + START_DATE[4:]
+
     # National CPI (BLS CPIAUCSL via FRED)
-    us_cpi = fetch_fred('CPIAUCSL')
+    us_cpi = fetch_fred('CPIAUCSL', start=cpi_start)
 
-    # DFW CPI (FRED: Dallas-Fort Worth-Arlington All Urban CPI, NSA)
-    dfw_cpi = fetch_fred('CUURA316SA0')
-
-    # Texas CPI: population-weighted average of DFW + Houston + San Antonio
-    # BLS series: Houston = CUURA318SA0, San Antonio = CUURA317SA0
-    bls = fetch_bls(['CUURA318SA0', 'CUURA317SA0'])
-    houston_cpi = bls.get('CUURA318SA0', pd.Series(dtype=float))
-    sa_cpi      = bls.get('CUURA317SA0', pd.Series(dtype=float))
+    # DFW CPI (FRED)
+    dfw_cpi     = fetch_fred('CUURA316SA0', start=cpi_start)
+    # Houston and San Antonio CPI (FRED — BLS API does not carry these series)
+    houston_cpi = fetch_fred('CUURA318SA0', start=cpi_start)
+    sa_cpi      = fetch_fred('CUURA423SA0', start=cpi_start)
 
     df = pd.DataFrame({
         'us':      us_cpi,
@@ -156,6 +160,7 @@ def build_price_pressures():
         'texas_yoy':   yoy(df['texas']),
         'dfw_yoy':     yoy(df['dfw']),
     }).dropna(subset=['us_index'])
+    result = result[result.index >= pd.Timestamp(START_DATE)]
 
     return {
         'dates':       dates_list(result.index),
@@ -171,46 +176,35 @@ def build_price_pressures():
 
 # ── MONEY MATTERS ─────────────────────────────────────────────────────────────
 
-def parse_quarterly_date(d):
-    """Parse dates in 'YYYY:QX' or 'YYYY QX' format, or fall back to standard parsing."""
-    d = str(d).strip()
-    for sep in [':', ' ']:
-        if f'{sep}Q' in d:
-            parts = d.split(f'{sep}Q')
-            if len(parts) == 2:
-                try:
-                    year  = int(parts[0].strip())
-                    month = (int(parts[1].strip()) - 1) * 3 + 1
-                    return pd.Timestamp(year, month, 1)
-                except (ValueError, TypeError):
-                    pass
-    return pd.to_datetime(d, errors='coerce')
-
-
 def fetch_ny_fed_lw():
-    """Download Laubach-Williams r* estimates from NY Fed (quarterly)."""
+    """Download Laubach-Williams r* estimates from NY Fed (quarterly).
+    Reads the 'data' sheet; dates are already Python datetimes in column 0,
+    one-sided rstar estimate is in column 2.
+    """
     url = ('https://www.newyorkfed.org/medialibrary/media/research/economists'
            '/williams/data/Laubach_Williams_current_estimates.xlsx')
     r = requests.get(url, timeout=60)
     r.raise_for_status()
-    df = pd.read_excel(io.BytesIO(r.content), skiprows=4)
-    df.columns = [str(c).strip() for c in df.columns]
-    date_col = df.columns[0]
-    # NY Fed uses 'YYYY:QX' format — use custom parser
-    df[date_col] = df[date_col].apply(parse_quarterly_date)
-    df = df.dropna(subset=[date_col]).set_index(date_col)
-    rstar_cols = [c for c in df.columns if 'rstar' in c.lower() or 'r*' in c.lower()]
+    df = pd.read_excel(io.BytesIO(r.content), sheet_name='data', skiprows=5, header=0)
+    # Column 0 = Date, column 2 = one-sided rstar
+    df = df.dropna(subset=[df.columns[0]])
+    df[df.columns[0]] = pd.to_datetime(df.iloc[:, 0])
+    df = df.set_index(df.columns[0])
+    series = df.iloc[:, 1].dropna().astype(float)   # col index 1 = rstar (after dropping Unnamed:1 via iloc)
+    # Use iloc col 1 which is rstar (first non-empty data col after Date)
+    # Try column named 'rstar' first
+    rstar_cols = [c for c in df.columns if str(c).strip().lower() == 'rstar']
     if rstar_cols:
-        series = df[rstar_cols[-1]].dropna().astype(float)
+        series = df[rstar_cols[0]].dropna().astype(float)
     else:
-        numeric = df.select_dtypes(include='number').columns
-        series  = df[numeric[-1]].dropna().astype(float) if len(numeric) else pd.Series(dtype=float)
+        series = df.iloc[:, 1].dropna().astype(float)
+    if not isinstance(series.index, pd.DatetimeIndex) or series.empty:
+        return pd.Series(dtype=float)
     return series
 
 
 def fetch_richmond_nri():
     """Download natural rate of interest data from Richmond Fed (quarterly)."""
-    # Try multiple possible URLs since Richmond Fed occasionally moves files
     urls = [
         'https://www.richmondfed.org/-/media/richmondfedorg/research/national_economy/natural_rate_of_interest/data/natural-rate-of-interest-data.xlsx',
         'https://www.richmondfed.org/-/media/richmondfedorg/research/national_economy/natural_rate_of_interest/natural_rate_of_interest_data.xlsx',
@@ -254,9 +248,9 @@ def build_money_matters():
     ffr_upper   = ffr_upper_d.resample('MS').last().ffill()
     ffr_lower   = ffr_lower_d.resample('MS').last().ffill()
 
-    # 3-month annualised CPI inflation for real rate calculation
+    # Year-over-year CPI inflation for real rate calculation
     cpi = fetch_fred('CPIAUCSL')
-    cpi_inf = (cpi.pct_change() * 100 * 12).rolling(3).mean()
+    cpi_inf = cpi.pct_change(12) * 100
 
     df = pd.DataFrame({
         'ffr_upper': ffr_upper,
@@ -268,30 +262,28 @@ def build_money_matters():
 
     # Laubach-Williams natural rate (quarterly → forward-fill to monthly)
     try:
-        lw = fetch_ny_fed_lw().resample('MS').last().ffill()
+        lw_raw = fetch_ny_fed_lw()
+        if isinstance(lw_raw.index, pd.DatetimeIndex) and not lw_raw.empty:
+            lw = lw_raw.resample('MS').last().ffill()
+        else:
+            lw = pd.Series(dtype=float)
+            print("    Warning: NY Fed LW data unavailable — unexpected format")
     except Exception as e:
         print(f"    Warning: NY Fed LW data unavailable — {e}")
         lw = pd.Series(dtype=float)
 
-    # Richmond Fed natural rate (quarterly → forward-fill to monthly)
-    richmond = fetch_richmond_nri()
-    if not richmond.empty:
-        richmond = richmond.resample('MS').last().ffill()
-
     result = pd.DataFrame({
-        'real_upper':       df['real_upper'],
-        'real_lower':       df['real_lower'],
-        'natural_lw':       lw,
-        'natural_richmond': richmond,
+        'real_upper': df['real_upper'],
+        'real_lower': df['real_lower'],
+        'natural_lw': lw,
     })
-    result = result[result.index >= pd.Timestamp(START_DATE)]
+    result = result[result.index >= pd.Timestamp('2024-01-01')]
 
     return {
-        'dates':                dates_list(result.index),
-        'real_ffr_upper':       to_list(result['real_upper']),
-        'real_ffr_lower':       to_list(result['real_lower']),
-        'natural_rate_lw':      to_list(result['natural_lw']),
-        'natural_rate_richmond': to_list(result['natural_richmond']),
+        'dates':             dates_list(result.index),
+        'real_ffr_upper':    to_list(result['real_upper']),
+        'real_ffr_lower':    to_list(result['real_lower']),
+        'natural_rate_lw':   to_list(result['natural_lw']),
     }
 
 
@@ -300,24 +292,17 @@ def build_money_matters():
 def build_labor():
     print("  Fetching labor market data...")
 
-    # Unemployment rates — use BLS LAUS API for MSA-level data
-    # LAUS series format: LAUMT + state FIPS (2) + CBSA (5) + zeros (5) + measure (03=rate)
-    laus = fetch_bls([
-        'LAUMT483118000000003',   # Lubbock, TX MSA (CBSA 31180)
-        'LAUMT481912400000003',   # Dallas-Fort Worth-Arlington MSA (CBSA 19124)
-        'LASST480000000000003',   # Texas
-        'LAUTT000000000000003',   # United States
-    ])
-    lubbock_ur = laus.get('LAUMT483118000000003', pd.Series(dtype=float))
-    dfw_ur     = laus.get('LAUMT481912400000003', pd.Series(dtype=float))
-    texas_ur   = laus.get('LASST480000000000003',  pd.Series(dtype=float))
-    us_ur      = laus.get('LAUTT000000000000003',  fetch_fred_safe('UNRATE'))
+    # Unemployment rates from FRED (SA where available)
+    lubbock_ur = fetch_fred('LUBB148UR')   # Lubbock, TX MSA — SA
+    dfw_ur     = fetch_fred('DALL148UR')   # Dallas-Fort Worth-Arlington MSA — SA
+    texas_ur   = fetch_fred('TXUR')        # Texas — SA
+    us_ur      = fetch_fred('UNRATE')      # United States — SA
 
-    # Nonfarm payroll employment from FRED (safe fetches with fallbacks)
-    lubbock_emp = fetch_fred_safe('LUBBNA')    # Lubbock nonfarm (thousands)
-    dfw_emp     = fetch_fred_safe('DALLSNA')   # DFW nonfarm (thousands)
-    texas_emp   = fetch_fred_safe('TXNA')      # Texas nonfarm (thousands)
-    us_emp      = fetch_fred('PAYEMS')         # US nonfarm (thousands) — known good
+    # Nonfarm payroll employment from FRED (SA)
+    lubbock_emp = fetch_fred('LUBB148NA')  # Lubbock nonfarm (thousands) — SA
+    dfw_emp     = fetch_fred('DALL148NA')  # DFW nonfarm (thousands) — SA
+    texas_emp   = fetch_fred('TXNA')       # Texas nonfarm (thousands) — SA
+    us_emp      = fetch_fred('PAYEMS')     # US nonfarm (thousands) — SA
 
     # Employment indices (Jan 2020 = 100)
     emp = pd.DataFrame({
@@ -373,22 +358,20 @@ def build_labor():
 def build_wages():
     print("  Fetching wages data...")
 
-    # BLS QCEW average weekly wages (quarterly)
-    # Series format: ENU + area FIPS (5 digits) + 4 (quarterly) + 0 (all ownership) + 10 (all industries)
-    # National: 00000, Texas: 48000, DFW MSA: 23104, Lubbock MSA: 29700
-    series_ids = [
-        'ENU0000040010',   # United States, all industries, all ownership
-        'ENU4800040010',   # Texas
-        'ENU1923340010',   # Dallas-Fort Worth-Arlington MSA
-        'ENU2970040010',   # Lubbock, TX MSA
-    ]
-
-    raw = fetch_bls(series_ids, start_year=START_YEAR)
-
-    us_wages      = raw.get('ENU0000040010', pd.Series(dtype=float))
-    texas_wages   = raw.get('ENU4800040010', pd.Series(dtype=float))
-    dfw_wages     = raw.get('ENU1923340010', pd.Series(dtype=float))
-    lubbock_wages = raw.get('ENU2970040010', pd.Series(dtype=float))
+    # Average weekly wages — all seasonally adjusted (SA) so levels and ratios are smooth
+    # Lubbock and DFW: FRED ENUC QCEW series, SA
+    lubbock_wages = fetch_fred('ENUC311840010SA')   # Lubbock MSA, total covered, SA
+    dfw_wages     = fetch_fred('ENUC191040010SA')   # DFW MSA, total covered, SA
+    # Texas: No SA QCEW or SA CES available on FRED; apply 12-month trailing MA to NSA monthly
+    # series before resampling to quarterly — this removes the seasonal cycle without external libs
+    texas_wages_m = fetch_fred('SMU48000000500000011')   # Texas CES, NSA monthly
+    if not texas_wages_m.empty:
+        texas_wages = texas_wages_m.rolling(12, min_periods=4).mean().resample('QS').mean()
+    else:
+        texas_wages = pd.Series(dtype=float)
+    # US: FRED CES average weekly earnings, all employees, total private, SA (monthly → quarterly)
+    us_wages_m = fetch_fred('CES0500000011')         # US CES, SA monthly
+    us_wages   = us_wages_m.resample('QS').mean() if not us_wages_m.empty else pd.Series(dtype=float)
 
     df = pd.DataFrame({
         'lubbock': lubbock_wages,
@@ -406,7 +389,8 @@ def build_wages():
     df['lubbock_texas_ratio'] = (df['lubbock'] / df['texas']).round(4)
     df['lubbock_us_ratio']    = (df['lubbock'] / df['us']).round(4)
 
-    df = df[df.index >= pd.Timestamp(START_DATE)]
+    if isinstance(df.index, pd.DatetimeIndex) and not df.empty:
+        df = df[df.index >= pd.Timestamp(START_DATE)]
 
     return {
         'dates':               dates_list(df.index),
@@ -444,7 +428,7 @@ def main():
             print(f"  ✓ {name}.json saved")
         except Exception as e:
             print(f"  ✗ {name} FAILED: {e}")
-            import traceback; traceback.print_exc()
+            raise
 
     metadata = {
         'last_updated': datetime.now().strftime('%B %d, %Y'),

@@ -18,7 +18,7 @@
             <p class="subtitle">Economic Dashboard</p>
         </div>
         <div class="header-meta">
-            Last updated: <span id="last-updated-date">—</span>
+            Last updated: <span id="last-updated-date-header">—</span>
         </div>
     </div>
 </header>
@@ -29,6 +29,7 @@
         <button class="tab-btn" data-tab="money-matters">Money Matters</button>
         <button class="tab-btn" data-tab="lubbock-labor">Lubbock Labor</button>
         <button class="tab-btn" data-tab="watching-wages">Watching Wages</button>
+        <button class="tab-btn" data-tab="methodology">Methodology</button>
     </div>
 </nav>
 
@@ -59,7 +60,7 @@
     <section id="money-matters" class="tab-content">
         <div class="section-header">
             <h2>Money Matters</h2>
-            <p class="section-desc">This section tracks the Federal Reserve's interest rate policy. The "real" federal funds rate is the Fed's benchmark rate adjusted for inflation — the key lever the Fed uses to speed up or slow down the economy. We compare it to two independent estimates of the "natural rate of interest": the rate that keeps the economy growing steadily without causing inflation. When the real rate is above the natural rate, monetary policy is tight. When it's below, policy is loose. Getting this balance right is the Fed's central challenge.</p>
+            <p class="section-desc">This section tracks the stance of the Federal Reserve's monetary policy, which affects capital markets across the country. The "real" federal funds rate is the Fed's benchmark rate adjusted for inflation. We compare it to an estimate of the "natural rate of interest," which is the rate that keeps the economy growing steadily without causing inflation. When the real rate is above the natural rate, monetary policy is tight. When it's below, policy is loose. Getting this balance right is the Fed's central challenge.</p>
         </div>
         <div class="charts-grid">
             <div class="chart-card wide">
@@ -68,7 +69,7 @@
             </div>
         </div>
         <div class="data-source">
-            <strong>Sources:</strong> Federal Reserve Board (federal funds rate target range); U.S. Bureau of Labor Statistics (CPI, used for inflation adjustment); Federal Reserve Bank of New York (Laubach-Williams natural rate estimates, quarterly); Federal Reserve Bank of Richmond (natural rate median estimate, quarterly). Updated monthly.
+            <strong>Sources:</strong> Federal Reserve Board (federal funds rate target range); U.S. Bureau of Labor Statistics (CPI, used for inflation adjustment); Federal Reserve Bank of New York (Laubach-Williams natural rate estimates, quarterly). Data retrieved via FRED. Updated monthly.
         </div>
     </section>
 
@@ -76,7 +77,7 @@
     <section id="lubbock-labor" class="tab-content">
         <div class="section-header">
             <h2>Lubbock Labor</h2>
-            <p class="section-desc">How healthy is the job market in Lubbock — and how does it compare to the rest of Texas and the country? This section tracks unemployment rates, total employment levels, and year-over-year job growth across Lubbock, Dallas-Fort Worth, Texas, and the United States. A lower unemployment rate and positive job growth signal a strong local economy.</p>
+            <p class="section-desc">How healthy is Lubbock's job market compared to state and national job markets? This section tracks unemployment rates, total employment levels, and year-over-year job growth across Lubbock, Dallas-Fort Worth, Texas, and the United States. A lower unemployment rate and positive job growth signal a strong economy.</p>
         </div>
         <div class="charts-grid">
             <div class="chart-card">
@@ -101,7 +102,7 @@
     <section id="watching-wages" class="tab-content">
         <div class="section-header">
             <h2>Watching Wages</h2>
-            <p class="section-desc">Are workers earning more? This section tracks average weekly wages in Lubbock, Dallas-Fort Worth, Texas, and the United States — both dollar amounts and how fast they're growing year over year. We also show the ratio of Lubbock wages to Texas and U.S. wages, which reveals whether the local wage gap is widening or narrowing over time.</p>
+            <p class="section-desc">This section tracks average weekly wages in Lubbock, Dallas-Fort Worth, Texas, and the United States. We show both dollar amounts and how fast they're growing year over year. We also show the ratio of Lubbock wages to Texas and U.S. wages, which reveals whether the local wage gap is widening or narrowing over time.</p>
         </div>
         <div class="charts-grid">
             <div class="chart-card wide">
@@ -122,11 +123,102 @@
         </div>
     </section>
 
+    <!-- METHODOLOGY -->
+    <section id="methodology" class="tab-content">
+        <div class="section-header">
+            <h2>Methodology</h2>
+            <p class="section-desc">A plain-language guide to the data series used in this dashboard — what each measure is, why it matters, and where it comes from.</p>
+        </div>
+
+        <div class="methodology-content">
+
+            <div class="methodology-section">
+                <h3>Price Pressures</h3>
+
+                <div class="methodology-item">
+                    <h4>Consumer Price Index (CPI) — United States, Texas, Dallas-Fort Worth</h4>
+                    <p>The CPI measures the average change in prices consumers pay for a typical "basket" of goods and services. The basket includes things like groceries, gasoline, rent, and medical care. A rising CPI means prices are going up; a falling one means they're going down. We index all three series to January 2020 = 100, so you can directly compare how much prices have changed since just before the pandemic.</p>
+                    <p>The U.S. figure is the standard national CPI. The DFW figure is the official BLS metro-area CPI for Dallas-Fort Worth. Because there is no official statewide Texas CPI, the Texas figure is calculated as a population-weighted average of the Dallas-Fort Worth, Houston, and San Antonio metro-area CPIs. These are the three largest metros, which together represent the majority of the Texas population.</p>
+                    <p><strong>Source:</strong> U.S. Bureau of Labor Statistics (BLS), retrieved via FRED (Federal Reserve Bank of St. Louis). Updated monthly.</p>
+                </div>
+
+                <div class="methodology-item">
+                    <h4>2% Target Path</h4>
+                    <p>This dotted reference line shows what the cumulative price level would look like if inflation had grown at exactly 2% per year, every year, starting from January 2020. The Federal Reserve's official long-run inflation target is 2%. Comparing actual CPI to this path shows how far we've strayed from that goal.</p>
+                    <p><strong>Source:</strong> Calculated from the January 2020 base level. Not a data series — derived internally.</p>
+                </div>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Money Matters</h3>
+
+                <div class="methodology-item">
+                    <h4>Real Federal Funds Rate — Upper and Lower Bounds</h4>
+                    <p>The federal funds rate is the interest rate at which banks lend money to each other overnight. It is the Federal Reserve's primary tool for steering the economy. Since the 2007–8 Global Financial Crisis, the Fed targets the federal funds rate by adjusting the interest rate it pays banks on reserves they hold at the Fed. It raises rates when it's worried about high inflation and lowers rates when it's worried about economic weakness (falling output and employment). The Fed sets a target range, typically a quarter-point window, rather than a single number, which is why we show an upper bound and a lower bound.</p>
+                    <p>The "real" rate is the nominal (stated) rate minus the year-over-year inflation rate. This adjustment matters because what counts economically is not the rate you see on paper but what it means in terms of actual purchasing power. A 5% rate during 5% inflation is, in real terms, the same as a 0% rate during 0% inflation. Since financial markets care about inflation-adjusted returns, it's the real rate we need to track.</p>
+                    <p><strong>Source:</strong> Federal Reserve Board (federal funds rate target range) and U.S. Bureau of Labor Statistics (CPI for inflation adjustment), both retrieved via FRED. Updated monthly.</p>
+                </div>
+
+                <div class="methodology-item">
+                    <h4>Natural Rate of Interest — Laubach-Williams Estimate</h4>
+                    <p>The natural rate of interest (sometimes called r*) is the real interest rate that keeps the economy growing at its long-run potential without causing inflation to rise. We can't observe it directly. Instead, we must estimate it. When the real federal funds rate is above the natural rate, monetary policy is restrictive (putting the brakes on). When it is below the natural rate, policy is accommodative (stepping on the gas).</p>
+                    <p>The estimate shown here is the "one-sided" Laubach-Williams model, produced by economists at the Federal Reserve Bank of New York. It is updated quarterly.</p>
+                    <p><strong>Source:</strong> Federal Reserve Bank of New York. Updated quarterly.</p>
+                </div>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Lubbock Labor</h3>
+
+                <div class="methodology-item">
+                    <h4>Unemployment Rate</h4>
+                    <p>The unemployment rate is the share of the labor force that is currently jobless and actively looking for work. It does not count people who have stopped looking. A lower rate generally signals a healthier job market. All series are seasonally adjusted, meaning normal seasonal swings (e.g., holiday hiring, summer slowdowns) have been removed so month-to-month changes reflect real economic shifts.</p>
+                    <p><strong>Source:</strong> U.S. Bureau of Labor Statistics, Local Area Unemployment Statistics (LAUS) program, retrieved via FRED. Updated monthly.</p>
+                </div>
+
+                <div class="methodology-item">
+                    <h4>Total Employment Index (January 2020 = 100)</h4>
+                    <p>This chart counts total nonfarm payroll jobs — essentially every job outside of farms, private households, and the self-employed. We index each geography to January 2020 = 100 so you can compare recovery trajectories across places of very different sizes. A value above 100 means more jobs than before the pandemic; below 100 means fewer. All series are seasonally adjusted.</p>
+                    <p><strong>Source:</strong> U.S. Bureau of Labor Statistics, Current Employment Statistics (CES) program, retrieved via FRED. Updated monthly.</p>
+                </div>
+
+                <div class="methodology-item">
+                    <h4>Employment Year-Over-Year Growth</h4>
+                    <p>This shows how much total nonfarm employment has changed compared to the same month one year earlier, expressed as a percentage. Year-over-year comparisons avoid the distortions that can come from month-to-month noise. Positive values mean the economy added jobs relative to a year ago; negative values mean it shed jobs.</p>
+                    <p><strong>Source:</strong> Calculated from CES data (same as above).</p>
+                </div>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Watching Wages</h3>
+
+                <div class="methodology-item">
+                    <h4>Average Weekly Wages — Lubbock and Dallas-Fort Worth</h4>
+                    <p>Average weekly wages represent total wages paid to all covered workers in a quarter, divided by the number of workers and the number of weeks. "Covered" means workers whose employers pay into the unemployment insurance system, which includes the vast majority of private and public sector employees. These figures are seasonally adjusted and reported quarterly.</p>
+                    <p><strong>Source:</strong> U.S. Bureau of Labor Statistics, Quarterly Census of Employment and Wages (QCEW), retrieved via FRED. Updated quarterly (data is released with approximately a two-quarter lag).</p>
+                </div>
+
+                <div class="methodology-item">
+                    <h4>Average Weekly Wages — Texas and United States</h4>
+                    <p>For Texas and the U.S., average weekly earnings come from the Current Employment Statistics (CES) survey, which covers all employees in the private sector. These figures are seasonally adjusted. Because the CES is reported monthly, we average the three months of each quarter to align with the quarterly Lubbock and DFW figures. Note that CES and QCEW use slightly different methodologies and coverage, so small differences in levels between geographies may reflect measurement differences as well as real wage gaps.</p>
+                    <p><strong>Source:</strong> U.S. Bureau of Labor Statistics, Current Employment Statistics (CES), retrieved via FRED. Updated monthly.</p>
+                </div>
+
+                <div class="methodology-item">
+                    <h4>Lubbock Wages as a Percentage of Texas / U.S. Wages</h4>
+                    <p>This chart expresses Lubbock's average weekly wages as a share of Texas wages and U.S. wages. A value of 85% means Lubbock workers earn, on average, 85 cents for every dollar earned by the comparison group. Tracking this ratio over time shows whether the Lubbock wage gap is getting smaller (converging) or larger (diverging).</p>
+                    <p><strong>Source:</strong> Calculated from the wage series described above.</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
 </main>
 
 <footer>
     <div class="footer-content">
-        <p>Texas Trends is produced by <a href="https://www.awsalter.com" target="_blank">Alexander W. Salter</a>, Rawls College of Business, Texas Tech University, and the Free Market Institute.</p>
+        <p><a href="https://www.awsalter.com" target="_blank">Alexander William Salter</a>. "Texas Trends Economic Dashboard." Rawls College of Business, Area of Energy Commerce and Business Economics. Last updated: <span id="last-updated-date">—</span>. <a href="https://awsalter.github.io/texas-trends/" target="_blank">https://awsalter.github.io/texas-trends/</a></p>
         <p class="footer-disclaimer">This dashboard is for informational purposes only. All data is sourced from public government databases and updated automatically each month.</p>
     </div>
 </footer>

@@ -58,6 +58,7 @@ function lineDataset(label, data, color, opts = {}) {
         pointHoverRadius: 4,
         fill: opts.fillTarget ?? false,
         tension: 0.3,
+        spanGaps: true,
     };
 }
 
@@ -83,6 +84,7 @@ async function loadDashboard() {
         ]);
 
         document.getElementById('last-updated-date').textContent = meta.last_updated;
+        document.getElementById('last-updated-date-header').textContent = meta.last_updated;
 
         renderPricePressures(price);
         renderMoneyMatters(money);
@@ -146,29 +148,31 @@ function renderMoneyMatters(d) {
             labels: d.dates,
             datasets: [
                 {
-                    label: 'Real FFR Range',
+                    label: 'Real FFR — Upper Bound',
                     data: d.real_ffr_upper,
                     borderColor: C.ffr,
                     backgroundColor: 'rgba(229,62,62,0.08)',
-                    borderWidth: 1.5,
+                    borderWidth: 2,
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     fill: '+1',
                     tension: 0.3,
+                    spanGaps: true,
                 },
                 {
-                    label: '',
+                    label: 'Real FFR — Lower Bound',
                     data: d.real_ffr_lower,
                     borderColor: C.ffr,
                     backgroundColor: 'rgba(229,62,62,0.08)',
-                    borderWidth: 1.5,
+                    borderWidth: 2,
+                    borderDash: [4, 3],
                     pointRadius: 0,
+                    pointHoverRadius: 4,
                     fill: false,
                     tension: 0.3,
+                    spanGaps: true,
                 },
-                lineDataset('Natural Rate — Laubach-Williams (NY Fed)',      d.natural_rate_lw,       C.naturalLW,       { dash: [5,3] }),
-                lineDataset('Natural Rate — Median Estimate (Richmond Fed)', d.natural_rate_richmond, C.naturalRichmond, { dash: [5,3] }),
-                lineDataset('Zero',  d.dates.map(() => 0), '#cbd5e0', { dash: [2,4], width: 1, points: 0 }),
+                lineDataset('Natural Rate — Laubach-Williams (NY Fed)', d.natural_rate_lw, C.naturalLW, { dash: [5,3] }),
             ],
         },
         options: {
@@ -179,13 +183,18 @@ function renderMoneyMatters(d) {
                     ...BASE_OPTIONS.plugins.legend,
                     labels: {
                         ...BASE_OPTIONS.plugins.legend.labels,
-                        filter: item => item.text !== '',
+                        filter: item => ['Real FFR — Upper Bound', 'Real FFR — Lower Bound', 'Natural Rate — Laubach-Williams (NY Fed)'].includes(item.text),
                     },
                 },
             },
             scales: {
                 ...BASE_OPTIONS.scales,
-                y: { ...BASE_OPTIONS.scales.y, title: { display: true, text: 'Interest Rate (%)', font: { size: 11 } } },
+                y: {
+                    ...BASE_OPTIONS.scales.y,
+                    title: { display: true, text: 'Interest Rate (%)', font: { size: 11 } },
+                    suggestedMin: 0,
+                    suggestedMax: 4,
+                },
             },
         },
     });
